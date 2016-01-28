@@ -14,18 +14,18 @@ Work in progress. Your mileage may vary.
 
 === Install:
 
-Install the Sense HAT software by opening a Terminal window and entering the following commands (while connected to the Internet)::
+Install the Sense HAT software by opening a Terminal window and entering the following commands (while connected to the Internet):
 
-npm install sense-hat-matrix
+`npm install sense-hat-matrix`
 
 === Usage:
 
-example::
+example:
 
-"use strict";
+`"use strict";
 const sense = require(sense-hat-matrix);
 
-sense.setPixel(0,7,[244,0,0]);
+sense.setPixel(0,7,[244,0,0]);`
 
 API should follow the sense hat pthon library see (http://pythonhosted.org/sense-hat/api/#led-matrix). except all methods are camelCase
 
