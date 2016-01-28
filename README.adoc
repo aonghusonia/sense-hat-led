@@ -23,7 +23,7 @@ npm install sense-hat-matrix
 example:
 
 "use strict";
-const sense = require(sense-hat-matrix)
+const sense = require(sense-hat-matrix);
 
 sense.setPixel(0,7,[244,0,0]);
 
