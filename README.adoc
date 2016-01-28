@@ -22,10 +22,12 @@ Install the Sense HAT software by opening a Terminal window and entering the fol
 
 example:
 
-`"use strict";
+```
+"use strict";
 const sense = require(sense-hat-matrix);
 
-sense.setPixel(0,7,[244,0,0]);`
+sense.setPixel(0,7,[244,0,0]);
+```
 
 API should follow the sense hat pthon library see (http://pythonhosted.org/sense-hat/api/#led-matrix). except all methods are camelCase
 
