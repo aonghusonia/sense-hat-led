@@ -12,13 +12,13 @@ Control a Raspberry Pi Sense HAT LED Display
 
 Work in progress. Your mileage may vary.
 
-===Install:
+=== Install:
 
 Install the Sense HAT software by opening a Terminal window and entering the following commands (while connected to the Internet):
 
 npm install sense-hat-matrix
 
-===Usage:
+=== Usage:
 
 example:
 
