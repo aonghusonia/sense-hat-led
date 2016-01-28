@@ -14,13 +14,13 @@ Work in progress. Your mileage may vary.
 
 === Install:
 
-Install the Sense HAT software by opening a Terminal window and entering the following commands (while connected to the Internet):
+Install the Sense HAT software by opening a Terminal window and entering the following commands (while connected to the Internet)::
 
 npm install sense-hat-matrix
 
 === Usage:
 
-example:
+example::
 
 "use strict";
 const sense = require(sense-hat-matrix);
