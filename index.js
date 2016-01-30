@@ -127,8 +127,8 @@ function setPixels(pixelList) {
       if (col < 0 || col > 255) throw new Error(`RGB color ${rgb} violates` +
         ` [0, 0, 0] < RGB < [255, 255, 255]`);
     });
-    let x = Math.floor(index / 8);
-    let y = index % 8;
+    let y = Math.floor(index / 8);
+    let x = index % 8;
     buf.writeUInt16LE(pack(rgb), pos(x, y));
   });
 
