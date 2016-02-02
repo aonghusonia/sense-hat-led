@@ -5,7 +5,8 @@ let rotation = 0;
 const fs = require('fs'),
   glob = require('glob'),
   path = require('path'),
-  rotateMatrix = require('rotate-matrix');
+  rotateMatrix = require('rotate-matrix'),
+  PNG = require('pngjs').PNG;
 
 //find sense hat matrix framebuffer
 
@@ -15,8 +16,6 @@ let fb = '/dev/' +
   .find(framebuffer => fs.readFileSync(path.join(framebuffer, 'name')).toString().trim() === 'RPi-Sense FB')
   .split('/')
   .reverse()[0];
-
-console.log(fb);
 
 // Decodes 16 bit RGB565 into list [R,G,B]
 function unpack(n) {
@@ -154,13 +153,13 @@ function getPixels() {
     }
   }
   return pixelList;
-  }
+}
 
 function clear(rgb) {
   if (rgb === undefined) rgb = [0, 0, 0];
-  
-  let pixelList=[];
-  for (let i=0; i<64; i++){
+
+  let pixelList = [];
+  for (let i = 0; i < 64; i++) {
     pixelList.push(rgb);
   }
   setPixels(pixelList);
@@ -168,6 +167,8 @@ function clear(rgb) {
 
 // Flip LED matrix horizontal
 function flipH(redraw) {
+  if (redraw === undefined) redraw = true;
+
   let pixelList = getPixels(),
     flipped = [];
   while (pixelList.length) {
@@ -179,7 +180,10 @@ function flipH(redraw) {
 
 
 // Flip LED matrix vertical
+
 function flipV(redraw) {
+  if (redraw === undefined) redraw = true;
+
   let pixelList = getPixels(),
     flipped = [];
 
@@ -190,6 +194,178 @@ function flipV(redraw) {
   return flipped;
 }
 
+// Text assets
+
+let textDict = {};
+
+// Text asset files are rotated right through 90 degrees to allow blocks of
+// 40 contiguous pixels to represent one 5 x 8 character. These are stored
+// in a 8 x 640 pixel png image with characters arranged adjacently
+// Consequently we must rotate the pixel map left through 90 degrees to
+// compensate when drawing text
+
+const textAssets = 'sense_hat_text';
+
+loadTextAssets(`${__dirname}/${textAssets}.png`, `${__dirname}/${textAssets}.txt`);
+
+
+// Internal. Builds a character indexed dictionary of pixels used by the
+// show_message function below
+function loadTextAssets(textImageFile, textFile) {
+  let textPixels = loadImage(textImageFile, false);
+  let loadedText = fs.readFileSync(textFile, 'utf8');
+
+  for (let i = 0; i < loadedText.length; i++) {
+    let start = i * 40; //each character is 8x5 pixels
+    let end = start + 40;
+    textDict[loadedText[i]] = textPixels.slice(start, end);
+  }
+}
+
+
+// Internal. Trims white space pixels from the front and back of loaded
+// text characters
+function trimWhitespace(c) {
+  let psum = (arr) => arr.reduce((a, b) => a.concat(b))
+    .reduce((a, b) => a + b);
+
+  if (psum(c) > 0) {
+    let isEmpty = true;
+    while (isEmpty) { // from front
+      let row = c.slice(0, 8);
+      isEmpty = psum(row) === 0;
+      if (isEmpty) c.splice(0, 8);
+    }
+
+    isEmpty = true;
+    while (isEmpty) { //from back
+      let row = c.slice(-8);
+      isEmpty = psum(row) === 0;
+      if (isEmpty) c.splice(-8);
+    }
+  }
+  return c;
+}
+
+// Accepts a path to an 8 x 8 image file and updates the LED matrix with
+// the image
+function loadImage(filePath, redraw) {
+  if (redraw === undefined) redraw = true;
+
+  try {
+    fs.accessSync(filePath);
+  } catch (e) {
+    console.error(`${filePath} not found`);
+  }
+
+
+  //load file & convert to pixel list
+  const buf = fs.readFileSync(filePath);
+  const png = PNG.sync.read(buf);
+
+  let pixelList = [];
+
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < png.width; x++) {
+      let i = (png.width * y + x) << 2;
+      pixelList.push([png.data[i], png.data[i + 1], png.data[i + 2]]);
+    }
+  }
+
+  if (redraw) setPixels(pixelList);
+  return pixelList;
+}
+
+
+// Internal. Safeguards the character indexed dictionary for the
+// showMessage function below
+function getCharPixels(c) {
+  if (c.length === 1 && c in textDict) {
+    return textDict[c];
+  } else {
+    return textDict['?'];
+  }
+}
+
+
+// Scrolls a string of text across the LED matrix using the specified
+// speed and colours
+function showMessage(textString, scrollSpeed, textColour, backColour) {
+  // defaults
+  if (scrollSpeed === undefined) scrollSpeed = 100;
+  if (textColour === undefined) textColour = [255, 255, 255];
+  if (backColour === undefined) backColour = [0, 0, 0];
+
+  // We must rotate the pixel map left through 90 degrees when drawing
+  // text, see loadTextAssets
+  let previousRotation = rotation;
+  rotation = (rotation + 90) % 360;
+
+  let stringPadding = new Array(8).fill(backColour);
+  let letterPadding = new Array(16).fill(backColour);
+
+  let scrollPixels = [].concat(stringPadding);
+
+  for (let c of textString) {
+    scrollPixels = scrollPixels
+      .concat(trimWhitespace(getCharPixels(c))
+        //.concat(getCharPixels(c)
+        .map(rgb => {
+          if (rgb[0] === 255 && rgb[1] === 255 && rgb[2] === 255) {
+            return textColour;
+          } else {
+            return backColour;
+          }
+        }))
+      .concat(letterPadding);
+  }
+  scrollPixels = scrollPixels.concat(stringPadding);
+
+  let scrollLength = scrollPixels.length / 8;
+
+  for (let i = 0; i < scrollLength - 8; i++) {
+    let start = i * 8;
+    let end = start + 64;
+    setTimeout(() => setPixels(scrollPixels.slice(start, end)), i * scrollSpeed);
+  }
+
+  setTimeout(() => rotation = previousRotation, (scrollLength - 7) * scrollSpeed);
+}
+
+
+// Displays a single text character on the LED matrix using the specified
+// colours
+function showLetter(c, textColor, backColor) {
+  // defaults
+  if (textColor === undefined) textColor = [255, 255, 255];
+  if (backColor === undefined) backColor = [0, 0, 0];
+
+  if (c.length > 1) {
+    throw new Error('Only one character may be passed into this method');
+  }
+
+  // We must rotate the pixel map left through 90 degrees when drawing
+  // text, see loadTextAssets
+  let previousRotation = rotation;
+  rotation = (rotation + 90) % 360;
+
+  let pixelList = new Array(8)
+    .fill(backColor)
+    .concat((getCharPixels(c)
+      .map(rgb => {
+        if (rgb[0] === 255 && rgb[1] === 255 && rgb[2] === 255) {
+          return textColor;
+        } else {
+          return backColor;
+        }
+      })))
+    .concat(new Array(16).fill(backColor));
+
+  setPixels(pixelList);
+  rotation = previousRotation;
+}
+
+
 module.exports = {
   clear,
   setPixel,
@@ -198,7 +374,12 @@ module.exports = {
   getPixels,
   flipH,
   flipV,
-  setRotation
+  setRotation,
+  showMessage,
+  showLetter,
+  loadImage,
+  get rotation() { return rotation },
+  set rotation(r) {setRotation(r, true)}
 };
 
 
