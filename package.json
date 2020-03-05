@@ -2,7 +2,7 @@
   "name": "sense-hat-led",
   "description": "Control your sense hat led matrix with node",
   "author": "Aonghus O Nia",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "main": "index.js",
   "engines": {
     "node": ">=9.3"
