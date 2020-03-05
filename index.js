@@ -6,11 +6,10 @@ const fs = require('fs');
 const glob = require('glob');
 const path = require('path');
 const PNG = require('pngjs').PNG;
-const usleep = require('sleep').usleep;
 const ioctl = require('ioctl');
 
 function sleep(s) {
-  usleep(s * 1000000);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, s * 1000);
 }
 
 // find sense hat matrix framebuffer
