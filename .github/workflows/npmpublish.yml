@@ -1,4 +1,4 @@
-on: push
+on: release
 
 jobs:
   publish:
@@ -12,4 +12,4 @@ jobs:
       - run: npm test
       - uses: JS-DevTools/npm-publish@v1
         with:
-          token: ${{ secrets.NPM_TOKEN }}
+          token: ${{ secrets.npm_token }}
